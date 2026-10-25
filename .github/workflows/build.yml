@@ -13,27 +13,36 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.5
+
       - name: Decode Keystore
         run: |
           mkdir -p android/app
           printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
           ls -lh android/app/release.keystore
 
-      - name: Find and Build
+      - name: Create gradlew if missing
         run: |
-          echo "Procurando gradlew..."
-          find . -name "gradlew" -type f
-          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -1)
-          if [ -z "$GRADLEW_PATH" ]; then echo "ERRO: gradlew não encontrado no repositório"; ls -R | head -100; exit 1; fi
-          echo "Achou em: $GRADLEW_PATH"
-          chmod +x $GRADLEW_PATH
-          DIR=$(dirname $GRADLEW_PATH)
-          cd $DIR
+          if [ ! -f android/gradlew ]; then
+            echo "gradlew não existe, criando agora..."
+            cd android
+            gradle wrapper --gradle-version 8.5
+            chmod +x gradlew
+            ls -la
+            cd ..
+          else
+            echo "gradlew já existe"
+            chmod +x android/gradlew
+          fi
+
+      - name: Build AAB
+        working-directory: ./android
+        run: |
           ./gradlew bundleRelease -Pandroid.injected.signing.store.file=app/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.STORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: app-aab
-          path: |
-            **/app/build/outputs/bundle/release/*.aab
-            android/app/build/outputs/bundle/release/*.aab
+          path: android/app/build/outputs/bundle/release/*.aab
