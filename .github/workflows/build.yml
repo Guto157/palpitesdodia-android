@@ -14,17 +14,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Prepare
-        run: |
-          unzip -o android.zip
-          npm install --legacy-peer-deps
-          npx cap sync android
-      - name: Build
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew bundleDebug
+      - run: unzip -o android.zip
+      - run: npm install --legacy-peer-deps
+      - run: cd android && chmod +x gradlew && ./gradlew bundleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: aab
-          path: android/app/build/outputs/bundle/debug/*.aab
+          path: android/app/build/outputs/**/*.aab
