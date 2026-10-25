@@ -1,46 +1,26 @@
 name: Build Android AAB
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-
-      - name: Install deps
-        run: |
-          if [ -f package.json ]; then npm install; fi
-          if [ -f yarn.lock ]; then yarn install || true; fi
-
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-          ls -lh android/app/release.keystore
-
+          mkdir -p android/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
       - name: Build AAB
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file=app/release.keystore \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTORE_PASSWORD }}
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
+          ./gradlew bundleRelease -Pandroid.injected.signing.store.file=app/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.STORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: app-aab
           path: android/app/build/outputs/bundle/release/*.aab
