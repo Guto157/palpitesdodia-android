@@ -36,7 +36,6 @@ jobs:
       - run: npx cap sync android
 
       # 5. ATUALIZAÇÃO DE VARIÁVEIS NATIVAS: Min SDK 24 e incremento automático de versões
-      # NOTA: O versionCode precisa ser alterado se a versão atual da loja for maior ou igual a 2.
       - run: |
           sed -i 's/minSdkVersion = 23/minSdkVersion = 24/g' android/variables.gradle
           sed -i 's/versionCode = 1/versionCode = 2/g' android/variables.gradle
@@ -56,10 +55,10 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 7. EXTRAÇÃO DA CHAVE: Converte a Keystore salva no GitHub de volta em arquivo nativo
+      # 7. EXTRAÇÃO CORRETA DA CHAVE: Remove espaços em branco ou quebras de linha antes de decodificar
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/palpites_real.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 --decode > android/app/palpites_real.keystore
 
       # 8. ASSINATURA DE PRODUÇÃO: Configura o Gradle para aplicar sua assinatura oficial no modo Release
       - run: |
