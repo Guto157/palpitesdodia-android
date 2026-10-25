@@ -60,13 +60,13 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 8. ASSINATURA INJETADA DIRETAMENTE NO COMANDO GRADLE
+      # 8. ASSINATURA COM CAMINHO ABSOLUTO
       - name: Compilar e Assinar com Sucesso
         run: |
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file="palpites_real.keystore" \
+            -Pandroid.injected.signing.store.file="${{ github.workspace }}/android/app/palpites_real.keystore" \
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="palpites_alias" \
             -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
