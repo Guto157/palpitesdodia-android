@@ -7,28 +7,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: rm -rf android
+
+      # 1. Instala as dependências do projeto
       - run: npm install --legacy-peer-deps
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
-      - run: mkdir -p www && echo '<h1>ok</h1>' > www/index.html && echo '{"appId":"com.palpitesdodia.app","appName":"Palpites do Dia","webDir":"www"}' > capacitor.config.json
-      - run: npx --yes @capacitor/cli add android
-      - run: npx --yes @capacitor/cli copy android
+
+      # 2. Garante que a pasta web exista com um conteúdo mínimo (caso não venha do repositório)
+      - run: mkdir -p www && echo '<h1>Palpites</h1>' > www/index.html && echo '{"appId":"com.palpitesdodia.app","appName":"Palpites","webDir":"www"}' > capacitor.config.json
+
+      # 3. Adiciona a plataforma apenas se ela não existir, ou atualiza se já existir
       - run: |
-          rm -rf android/capacitor-cordova-android-plugins
-          echo "include ':capacitor-android'" > android/capacitor.settings.gradle
-          echo "project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android')" >> android/capacitor.settings.gradle
-          echo "include ':app'" > android/settings.gradle
-          echo 'apply from: "capacitor.settings.gradle"' >> android/settings.gradle
-          sed -i "/capacitor-cordova-android-plugins/d" android/app/build.gradle
-          sed -i "/cordova/d" android/app/build.gradle
-      - run: cd android && chmod +x gradlew && ./gradlew bundleDebug
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
+      # 4. O COMANDO CRUCIAL: Sincroniza o código web e gera os arquivos Cordova necessários
+      - run: npx cap sync android
+
+      # 5. Executa o build nativo usando o Gradle original criado pelo Capacitor
+      - run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleDebug
+
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-aab
