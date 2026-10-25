@@ -7,38 +7,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           
-      - name: Setup deps for Capacitor
+      - name: Install and Sync
         run: |
           ls -la
+          find . -type f -name "gradlew" | head
           if [ -f package.json ]; then
             npm install
-            npx cap sync android
           else
-            echo "sem package.json, criando node_modules minimo"
             npm init -y
             npm install @capacitor/android @capacitor/core
-            npx cap sync android || true
           fi
-          
-      - name: Setup Java 21
-        uses: actions/setup-java@v4
+          npx cap sync android || echo "sync falhou, continuando"
+          echo "--- onde está o gradlew ---"
+          find . -name "gradlew"
+
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
       - name: Build AAB
         run: |
-          cd android
+          GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+          echo "Achou em $GRADLEW_PATH"
+          ANDROID_DIR=$(dirname "$GRADLEW_PATH")
+          cd "$ANDROID_DIR"
           chmod +x gradlew
           ./gradlew bundleRelease
 
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: "**/outputs/bundle/release/*.aab"
