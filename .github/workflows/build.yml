@@ -16,13 +16,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21 # Alterado de 17 para 21 para corrigir o erro de source release
+          java-version: 21
 
       # 1. Instala o CLI do Capacitor e as dependências necessárias
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
 
       # 2. Configura o appId (com.palpitesdodia.app) e o appName (Palpites do Dia)
-      # Além de garantir que a pasta /www exista com uma estrutura mínima de inicialização
       - run: |
           mkdir -p www
           echo '<h1>Palpites do Dia</h1>' > www/index.html
@@ -36,13 +35,27 @@ jobs:
       # 4. Sincroniza a pasta /www e injeta as dependências corretas para o Gradle
       - run: npx cap sync android
 
-      # 5. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
+      # 5. RESOLUÇÃO DO ERRO DE DUPLICIDADE: Força o Gradle a alinhar as versões do Kotlin
+      - run: |
+          echo "subprojects {
+              configurations.all {
+                  resolutionStrategy {
+                      eachDependency { details ->
+                          if (details.requested.group == 'org.jetbrains.kotlin') {
+                              details.useVersion '1.8.22'
+                          }
+                      }
+                  }
+              }
+          }" >> android/build.gradle
+
+      # 6. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
       - run: |
           cd android
           chmod +x gradlew
           ./gradlew bundleDebug
 
-      # 6. Salva o arquivo .aab gerado nos Artifacts para download
+      # 7. Salva o arquivo .aab gerado nos Artifacts para download
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-aab
