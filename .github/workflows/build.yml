@@ -35,7 +35,11 @@ jobs:
       # 4. Sincroniza a pasta /www e injeta as dependências corretas para o Gradle
       - run: npx cap sync android
 
-      # 5. RESOLUÇÃO DO ERRO DE DUPLICIDADE: Força o Gradle a alinhar as versões do Kotlin
+      # 5. AJUSTE DE MIN SDK: Altera o patamar mínimo para API 24 exigido pelo Google Play
+      - run: |
+          sed -i 's/minSdkVersion = 23/minSdkVersion = 24/g' android/variables.gradle
+
+      # 6. RESOLUÇÃO DE DUPLICIDADE: Força o Gradle a alinhar as versões do Kotlin
       - run: |
           echo "subprojects {
               configurations.all {
@@ -49,13 +53,13 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 6. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
+      # 7. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
       - run: |
           cd android
           chmod +x gradlew
           ./gradlew bundleDebug
 
-      # 7. Salva o arquivo .aab gerado nos Artifacts para download
+      # 8. Salva o arquivo .aab gerado nos Artifacts para download
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-aab
