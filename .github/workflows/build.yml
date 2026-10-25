@@ -9,20 +9,21 @@ jobs:
         with: { node-version: 20 }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
-      
-      - name: Build
-        run: |
+      - run: |
+          ls -la
           unzip -o android.zip
-          rm android.zip
+          rm android.zip || true
+          ls -la
+          find . -type f -name "gradlew" | head -20
           npm install
-          mkdir -p www
-          echo "<html></html>" > www/index.html || true
+          mkdir -p www && echo "ok" > www/index.html || true
           npx cap sync android || true
-          cd android
+          GW=$(find . -type f -name "gradlew" | head -n 1)
+          echo "Gradlew em: $GW"
+          cd $(dirname $GW)
           chmod +x gradlew
           ./gradlew bundleRelease
-
       - uses: actions/upload-artifact@v4
         with:
           name: aab-final
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: "**/outputs/bundle/release/*.aab"
