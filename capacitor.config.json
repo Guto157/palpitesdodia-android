@@ -1,0 +1,12 @@
+{
+	"appId": "com.br.palpitedodia.app",
+	"appName": "Palpite do Dia",
+	"webDir": "native-shell",
+	"server": {
+		"url": "https://neon-daily-picks.lovable.app",
+		"cleartext": false
+	},
+	"android": {
+		"allowMixedContent": false
+	}
+}
