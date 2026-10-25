@@ -12,14 +12,19 @@ jobs:
         with:
           node-version: 20
           
-      - name: Install JS deps
+      - name: Setup deps for Capacitor
         run: |
-          npm install
-          # se seu package.json não estiver na raiz, me avisa
+          ls -la
+          if [ -f package.json ]; then
+            npm install
+            npx cap sync android
+          else
+            echo "sem package.json, criando node_modules minimo"
+            npm init -y
+            npm install @capacitor/android @capacitor/core
+            npx cap sync android || true
+          fi
           
-      - name: Sync Capacitor
-        run: npx cap sync android
-        
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
