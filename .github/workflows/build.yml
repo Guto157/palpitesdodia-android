@@ -60,43 +60,18 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 8. SISTEMA DE CORREÇÃO AUTOMÁTICA DE SENHA E ALIAS
-      - name: Configurar Assinatura Forçada
+      # 8. ASSINATURA INJETADA DIRETAMENTE NO COMANDO GRADLE
+      - name: Compilar e Assinar com Sucesso
         run: |
-          # Descobre o alias real de dentro da sua chave dinamicamente
-          REAL_ALIAS=$(keytool -list -keystore android/app/palpites_real.keystore -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" 2>/dev/null | grep -i 'Entry' | awk -F, '{print $1}' | tr -d ' ')
-          if [ -z "$REAL_ALIAS" ]; then
-            REAL_ALIAS=$(keytool -list -keystore android/app/palpites_real.keystore -storepass "Palpites123!" 2>/dev/null | grep -i 'Entry' | awk -F, '{print $1}' | tr -d ' ')
-          fi
-          if [ -z "$REAL_ALIAS" ]; then
-            REAL_ALIAS="palpites_alias"
-          fi
-          
-          # Injeta a configuração direto no Gradle usando o Alias descoberto
-          echo "
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file('palpites_real.keystore')
-                      storePassword '${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
-                      keyAlias '$REAL_ALIAS'
-                      keyPassword '${{ secrets.ANDROID_KEY_PASSWORD }}'
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }" >> android/app/build.gradle
-
-      # 9. COMPILAÇÃO DE PRODUÇÃO: Gera o pacote oficial assinado
-      - run: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease --continue || ./gradlew bundleRelease -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -Pandroid.injected.signing.key.alias="palpites_alias" -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file="palpites_real.keystore" \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="palpites_alias" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
 
-      # 10. SALVAR ARQUIVO: Disponibiliza o app-release.aab pronto na aba de Artifacts
+      # 9. SALVAR ARQUIVO: Disponibiliza o app-release.aab pronto na aba de Artifacts
       - uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
