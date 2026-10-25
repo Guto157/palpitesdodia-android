@@ -18,28 +18,31 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # 1. Instala o CLI do Capacitor e as dependências necessárias
+      # 1. Instala as dependências necessárias do Capacitor
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
 
-      # 2. Configura o appId (com.palpitesdodia.app) e o appName (Palpites do Dia)
+      # 2. Configura a estrutura web e o arquivo de configuração do projeto
       - run: |
           mkdir -p www
           echo '<h1>Palpites do Dia</h1>' > www/index.html
           echo '{"appId":"com.palpitesdodia.app","appName":"Palpites do Dia","webDir":"www"}' > capacitor.config.json
 
-      # 3. Remove qualquer resquício anterior e cria a plataforma /android de forma limpa
+      # 3. Reconstrói a plataforma /android nativa do zero
       - run: |
           rm -rf android
           npx cap add android
 
-      # 4. Sincroniza a pasta /www e injeta as dependências corretas para o Gradle
+      # 4. Sincroniza os arquivos web para dentro do projeto nativo
       - run: npx cap sync android
 
-      # 5. AJUSTE DE MIN SDK: Altera o patamar mínimo para API 24 exigido pelo Google Play
+      # 5. ATUALIZAÇÃO DE VARIÁVEIS NATIVAS: Min SDK 24 e incremento automático de versões
+      # NOTA: O versionCode precisa ser alterado se a versão atual da loja for maior ou igual a 2.
       - run: |
           sed -i 's/minSdkVersion = 23/minSdkVersion = 24/g' android/variables.gradle
+          sed -i 's/versionCode = 1/versionCode = 2/g' android/variables.gradle
+          sed -i 's/versionName = "1.0"/versionName = "1.0.1"/g' android/variables.gradle
 
-      # 6. RESOLUÇÃO DE DUPLICIDADE: Força o Gradle a alinhar as versões do Kotlin
+      # 6. ALINHAMENTO DO KOTLIN: Previne o erro CheckDuplicatesRunnable
       - run: |
           echo "subprojects {
               configurations.all {
@@ -53,14 +56,38 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 7. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
+      # 7. EXTRAÇÃO DA CHAVE: Converte a Keystore salva no GitHub de volta em arquivo nativo
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/palpites_real.keystore
+
+      # 8. ASSINATURA DE PRODUÇÃO: Configura o Gradle para aplicar sua assinatura oficial no modo Release
+      - run: |
+          echo "
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('palpites_real.keystore')
+                      storePassword '${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
+                      keyAlias '${{ secrets.ANDROID_KEY_ALIAS }}'
+                      keyPassword '${{ secrets.ANDROID_KEY_PASSWORD }}'
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }" >> android/app/build.gradle
+
+      # 9. COMPILAÇÃO OFICIAL: Gera o arquivo final otimizado em modo Release
       - run: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleDebug
+          ./gradlew bundleRelease
 
-      # 8. Salva o arquivo .aab gerado nos Artifacts para download
+      # 10. PUBLICAÇÃO DO ARTIFACT: Disponibiliza o arquivo .aab assinado e pronto para a Play Store
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug-aab
-          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
