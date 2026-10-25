@@ -1,0 +1,56 @@
+name: Build Android AAB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then npm install; fi
+
+      - name: Generate Keystore automatically
+        run: |
+          keytool -genkey -v -keystore release.keystore -alias ${{ secrets.KEY_ALIAS }} -keyalg RSA -keysize 2048 -validity 10000 -storepass ${{ secrets.STORE_PASSWORD }} -keypass ${{ secrets.KEY_PASSWORD }} -dname "CN=Palpites, OU=Dev, O=App, L=Itabira, S=MG, C=BR"
+          ls -lh
+          if [ -d android/app ]; then cp release.keystore android/app/release.keystore; fi
+          if [ -d android ]; then cp release.keystore android/release.keystore; fi
+
+      - name: Build with Gradle
+        run: |
+          if [ -f android/gradlew ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$(pwd)/../release.keystore -Pandroid.injected.signing.store.password=${{ secrets.STORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+          elif [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew bundleRelease -Pandroid.injected.signing.store.file=$(pwd)/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.STORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+          else
+            echo "Gradle not found, trying npx cap build"
+            npx cap build android --no-open || true
+          fi
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: |
+            **/*.aab
+            **/app-release.apk
