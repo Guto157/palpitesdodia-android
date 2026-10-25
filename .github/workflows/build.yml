@@ -21,7 +21,7 @@ jobs:
       # 1. Instala as dependências do Capacitor
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
 
-      # 2. Configura a estrutura web e o ID do seu aplicativo
+      # 2. Configura a estrutura básica do projeto
       - run: |
           mkdir -p www
           echo '<h1>Palpites do Dia</h1>' > www/index.html
@@ -35,14 +35,14 @@ jobs:
       # 4. Sincroniza os arquivos
       - run: npx cap sync android
 
-      # 5. RECONSTRUTOR BINÁRIO: Converte o texto Base64 do seu celular de volta para a Keystore real
+      # 5. RECONSTRUTOR BINÁRIO: Converte o texto Base64 do seu celular de volta para o arquivo real
       - name: Decode Keystore File
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/palpites_real.keystore
 
-      # 6. DETECTOR DE ALIAS: Lê a chave e mostra o nome do Alias na tela de logs do GitHub
+      # 6. EXIBIDOR TOTAL: Mostra o conteúdo da chave sem travar o pipeline
       - name: Revelar Meu Key Alias Real
         run: |
-          echo "=== PROCURANDO SEU ALIAS ABAIXO ==="
-          keytool -list -v -keystore android/app/palpites_real.keystore -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" | grep -i "Nome do alias" || keytool -list -v -keystore android/app/palpites_real.keystore -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" | grep -i "Alias name"
-          echo "==================================="
+          echo "=== EXIBINDO DADOS DA CHAVE ABAIXO ==="
+          keytool -list -keystore android/app/palpites_real.keystore -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+          echo "======================================"
