@@ -15,51 +15,22 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # ERRO 1 - android.zip quebrado
-      - name: 1. Apagar android velho
-        run: rm -rf android
-
-      # ERRO 2 - faltava o executavel do cap
-      - name: 2. Instalar tudo que falta
-        run: |
-          npm install --legacy-peer-deps
-          npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
-
-      - name: 3. Criar www e config
-        run: |
+      - run: rm -rf android
+      - run: npm install --legacy-peer-deps
+      - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
+      - run: |
           mkdir -p www
           echo '<!DOCTYPE html><html><body><h1>Palpites</h1></body></html>' > www/index.html
           echo '{"appId":"com.palpitesdodia.app","appName":"Palpites do Dia","webDir":"www"}' > capacitor.config.json
-
-      - name: 4. Criar projeto android
-        run: npx --yes @capacitor/cli add android
-
-      # ERRO 3 - seu print: capacitor.settings.gradle does not exist
-      - name: 5. Correcao definitiva do settings.gradle
-        run: |
-          cat > android/capacitor.settings.gradle <<'EOF'
-          include ':capacitor-android'
-          project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android')
-          include ':capacitor-cordova-android-plugins'
-          project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
-          EOF
-
-          cat > android/settings.gradle <<'EOF'
-          include ':app'
-          apply from: "capacitor.settings.gradle"
-          EOF
-
-          mkdir -p android/capacitor-cordova-android-plugins/src/main/java
-          echo "android { namespace 'capacitor.cordova.android.plugins' }" > android/capacitor-cordova-android-plugins/build.gradle
-          echo "" > android/capacitor-cordova-android-plugins/settings.gradle
-
-      - name: 6. Copiar e Buildar AAB
-        run: |
-          npx --yes @capacitor/cli copy android
-          cd android
-          chmod +x gradlew
-          ./gradlew bundleDebug --stacktrace
-
+      - run: npx --yes @capacitor/cli add android
+      - run: npx --yes @capacitor/cli copy android
+      - run: |
+          rm -rf android/capacitor-cordova-android-plugins
+          echo "include ':capacitor-android'" > android/capacitor.settings.gradle
+          echo "project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android')" >> android/capacitor.settings.gradle
+          echo "include ':app'" > android/settings.gradle
+          echo 'apply from: "capacitor.settings.gradle"' >> android/settings.gradle
+      - run: cd android && chmod +x gradlew && ./gradlew bundleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-aab
