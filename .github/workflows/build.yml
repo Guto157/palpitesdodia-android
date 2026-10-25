@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17 # Versão recomendada e estável para builds do ecossistema Android/Capacitor
+          java-version: 21 # Alterado de 17 para 21 para corrigir o erro de source release
 
       # 1. Instala o CLI do Capacitor e as dependências necessárias
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
@@ -33,7 +33,7 @@ jobs:
           rm -rf android
           npx cap add android
 
-      # 4. Sincroniza a pasta /www e injeta as dependências corretas para o Gradle (Evita o erro da linha 10)
+      # 4. Sincroniza a pasta /www e injeta as dependências corretas para o Gradle
       - run: npx cap sync android
 
       # 5. Entra na pasta /android, concede permissão ao Gradle e gera o bundleDebug
