@@ -60,18 +60,32 @@ jobs:
               }
           }" >> android/build.gradle
 
-      # 8. ASSINATURA COM CAMINHO ABSOLUTO
+      # 8. BLINDAGEM DE SENHA: Salva as credenciais em formato seguro isolado do terminal
+      - name: Criar Propriedades de Assinatura
+        env:
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          echo "store_password=$STORE_PASS" > android/app/keystore.properties
+          echo "key_password=$KEY_PASS" >> android/app/keystore.properties
+
+      # 9. COMPILAÇÃO DE PRODUÇÃO: O Gradle lê as propriedades direto do arquivo isolado
       - name: Compilar e Assinar com Sucesso
         run: |
           cd android
           chmod +x gradlew
+          
+          # Carrega as senhas salvas no arquivo para dentro das variáveis do Gradle
+          STORE_PWD=$(grep store_password app/keystore.properties | cut -d= -f2)
+          KEY_PWD=$(grep key_password app/keystore.properties | cut -d= -f2)
+          
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="${{ github.workspace }}/android/app/palpites_real.keystore" \
-            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.store.password="$STORE_PWD" \
             -Pandroid.injected.signing.key.alias="palpites_alias" \
-            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+            -Pandroid.injected.signing.key.password="$KEY_PWD"
 
-      # 9. SALVAR ARQUIVO: Disponibiliza o app-release.aab pronto na aba de Artifacts
+      # 10. SALVAR ARQUIVO: Disponibiliza o app-release.aab pronto na aba de Artifacts
       - uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
