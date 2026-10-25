@@ -14,14 +14,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-
       - run: rm -rf android
       - run: npm install --legacy-peer-deps
       - run: npm install @capacitor/cli @capacitor/core @capacitor/android --save --legacy-peer-deps
-      - run: |
-          mkdir -p www
-          echo '<!DOCTYPE html><html><body><h1>Palpites</h1></body></html>' > www/index.html
-          echo '{"appId":"com.palpitesdodia.app","appName":"Palpites do Dia","webDir":"www"}' > capacitor.config.json
+      - run: mkdir -p www && echo '<h1>ok</h1>' > www/index.html && echo '{"appId":"com.palpitesdodia.app","appName":"Palpites do Dia","webDir":"www"}' > capacitor.config.json
       - run: npx --yes @capacitor/cli add android
       - run: npx --yes @capacitor/cli copy android
       - run: |
@@ -30,6 +26,8 @@ jobs:
           echo "project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android')" >> android/capacitor.settings.gradle
           echo "include ':app'" > android/settings.gradle
           echo 'apply from: "capacitor.settings.gradle"' >> android/settings.gradle
+          sed -i "/capacitor-cordova-android-plugins/d" android/app/build.gradle
+          sed -i "/cordova/d" android/app/build.gradle
       - run: cd android && chmod +x gradlew && ./gradlew bundleDebug
       - uses: actions/upload-artifact@v4
         with:
